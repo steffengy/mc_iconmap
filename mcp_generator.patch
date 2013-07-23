@@ -1,0 +1,104 @@
+Nur in minecraft/net/minecraft/src: FakeIconRegister.java.
+diff -r -U 3 minecraft - Kopie/net/minecraft/src/Minecraft.java minecraft/net/minecraft/src/Minecraft.java
+--- minecraft - Kopie/net/minecraft/src/Minecraft.java	2013-07-23 22:07:31.781055000 +0200
++++ minecraft/net/minecraft/src/Minecraft.java	2013-07-23 23:33:24.338991700 +0200
+@@ -17,6 +17,8 @@
+ import javax.imageio.ImageIO;
+ import net.minecraft.client.ClientBrandRetriever;
+ import net.minecraft.server.MinecraftServer;
++
++import org.apache.commons.io.FileUtils;
+ import org.lwjgl.LWJGLException;
+ import org.lwjgl.Sys;
+ import org.lwjgl.input.Keyboard;
+@@ -403,6 +405,90 @@
+         {
+             this.toggleFullscreen();
+         }
++      //Generate list of all textures
++        StringBuilder builder = new StringBuilder();
++        builder.append("{");
++        FakeIconRegister register = new FakeIconRegister();
++        boolean first = true;
++        for(int i = 0; i < Block.blocksList.length; ++i)
++        {
++        	if(Block.blocksList[i] == null) continue;
++        	if(!first) builder.append(",");
++        	builder.append("\"" + i + "\":");
++        	
++        	/* fetch icons the classic way */
++        	List<ItemStack> tmpList = new ArrayList<ItemStack>();
++        	
++        	Block.blocksList[i].getSubBlocks(-1, null, tmpList); //TODO: check if this gets all cases...
++        	if(tmpList.size() == 1)
++        	{
++        		builder.append("[");
++        		Block.blocksList[i].registerIcons(register);
++	        	boolean _first = true;
++	        	for(String icon : register.getResultAndReset())
++	        	{
++	        		if(!_first) builder.append(",");
++	        		builder.append("\"" + icon + "\"");
++	        		_first = false;
++	        	}
++	        	builder.append("]");
++	        	first = false;
++        	}
++        	/* fetch icons of multi-typed blocks another way */
++        	else
++        	{
++        		builder.append("{");
++        		boolean _first = true;
++        		boolean isArray = true;
++        		
++        		for(ItemStack stack : tmpList)
++        		{
++        			if(!_first) if(isArray) builder.append("},"); else builder.append(",");
++        			_first = false;
++        			builder.append("\"" + stack.getItemDamage() + "\":{");
++        			/* NOTICE: Icon icon = obj.getIconFromDamage(stack.getItemDamage());
++        			 * NOTICE: getIconFromDamage is "return this.theBlock.getIcon(2, par1);" where 2 is the side
++        			 * WARNING: THIS __CURRENTLY__ works, but below here, a better solution (than -1) more close to the minecraft behavior should be implemented
++        			 */
++        			Icon side = Block.blocksList[i].getIcon(-1/*side*/, stack.getItemDamage()/*metadata*/);
++        			Icon top = Block.blocksList[i].getIcon(1/*side*/, stack.getItemDamage());
++        			boolean needsSeperator = false;
++        			if(top != null && side != null && top == side)
++        			{
++        				isArray = false;
++        				builder.deleteCharAt(builder.length() - 1);
++        				builder.append("\"" + top.getIconName() + "\"");
++				continue;
++        			}	
++        			isArray = true;
++        			if(top != null)
++        			{
++        				builder.append("\"top\":\"" + top.getIconName() + "\"");
++        				needsSeperator = true;
++        			}
++        			if(side != null)
++        			{
++        				if(needsSeperator) builder.append(",");
++        				builder.append("\"side\":\"" + side.getIconName() + "\"");
++        			}
++        		}
++        		builder.append("}");
++            	first = false;
++        	}
++        	
++        	
++        }
++        builder.append("}");
++        File output = new File("iconregister.json");
++        System.out.println("Logging iconregister to " + output.getAbsolutePath());
++        try 
++        {
++			FileUtils.writeStringToFile(output, builder.toString());
++		} 
++        catch (IOException e) 
++        {
++			e.printStackTrace();
++		}
+     }
+ 
+     public void func_110436_a()
