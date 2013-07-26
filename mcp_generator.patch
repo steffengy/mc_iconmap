@@ -26,7 +26,7 @@ diff -r -U 3 -N minecraft - Kopie/net/minecraft/src/FakeIconRegister.java minecr
 +}
 diff -r -U 3 -N minecraft - Kopie/net/minecraft/src/Minecraft.java minecraft/net/minecraft/src/Minecraft.java
 --- minecraft - Kopie/net/minecraft/src/Minecraft.java	2013-07-23 22:07:31.781055000 +0200
-+++ minecraft/net/minecraft/src/Minecraft.java	2013-07-24 00:26:48.667079600 +0200
++++ minecraft/net/minecraft/src/Minecraft.java	2013-07-25 19:21:06.522143200 +0200
 @@ -17,6 +17,8 @@
  import javax.imageio.ImageIO;
  import net.minecraft.client.ClientBrandRetriever;
@@ -36,22 +36,25 @@ diff -r -U 3 -N minecraft - Kopie/net/minecraft/src/Minecraft.java minecraft/net
  import org.lwjgl.LWJGLException;
  import org.lwjgl.Sys;
  import org.lwjgl.input.Keyboard;
-@@ -403,6 +405,86 @@
+@@ -403,6 +405,104 @@
          {
              this.toggleFullscreen();
          }
 +      //Generate list of all textures
 +        StringBuilder builder = new StringBuilder();
++        StringBuilder builder2 = new StringBuilder();
 +        builder.append("{");
++        builder2.append("{");
 +        FakeIconRegister register = new FakeIconRegister();
 +        boolean first = true;
++        String builder2Pre = "";
 +        for(int i = 0; i < Block.blocksList.length; ++i)
 +        {
 +        	if(Block.blocksList[i] == null) continue;
 +        	if(!first) builder.append(",");
 +        	first = false;
 +        	builder.append("\"" + i + "\":");
-+        	
++        
 +        	/* fetch icons the classic way */
 +        	List<ItemStack> tmpList = new ArrayList<ItemStack>();
 +        	
@@ -59,6 +62,8 @@ diff -r -U 3 -N minecraft - Kopie/net/minecraft/src/Minecraft.java minecraft/net
 +        	if(tmpList.size() == 1)
 +        	{
 +        		builder.append("[");
++        		builder2.append(builder2Pre + "\"" + i + "\":\"" + Block.blocksList[i].getUnlocalizedName() + ".name\"");
++        		builder2Pre = ",";
 +        		Block.blocksList[i].registerIcons(register);
 +	        	boolean _first = true;
 +	        	for(String icon : register.getResultAndReset())
@@ -73,13 +78,21 @@ diff -r -U 3 -N minecraft - Kopie/net/minecraft/src/Minecraft.java minecraft/net
 +        	else
 +        	{
 +        		builder.append("{");
++        		builder2.append(builder2Pre + "\"" + i + "\": {");
 +        		boolean _first = true;
++        		Item resolver = Item.itemsList[Block.blocksList[i].blockID];
 +        		
++        		String builder22Pre = "";
 +        		for(ItemStack stack : tmpList)
 +        		{
 +        			if(!_first) builder.append(",");
 +        			_first = false;
 +        			builder.append("\"" + stack.getItemDamage() + "\":{");
++        			
++        			
++        			builder2.append(builder22Pre + "\"" + stack.getItemDamage() + "\":\"" + resolver.getUnlocalizedName(stack) + ".name\"");
++        			builder22Pre = ",";
++        			
 +        			/* NOTICE: Icon icon = obj.getIconFromDamage(stack.getItemDamage());
 +        			 * NOTICE: getIconFromDamage is "return this.theBlock.getIcon(2, par1);" where 2 is the side
 +        			 * WARNING: THIS __CURRENTLY__ works, but below here, a better solution (than -1) more close to the minecraft behavior should be implemented
@@ -106,15 +119,20 @@ diff -r -U 3 -N minecraft - Kopie/net/minecraft/src/Minecraft.java minecraft/net
 +        			builder.append("}");
 +        		}
 +        		builder.append("}");
++        		builder2.append("}");
 +        	}
 +        	
 +        }
 +        builder.append("}");
++        builder2.append("}");
 +        File output = new File("iconregister.json");
++        File output2 = new File("block_lang.json");
 +        System.out.println("Logging iconregister to " + output.getAbsolutePath());
++        System.out.println("Logging blocklang to " + output2.getAbsolutePath());
 +        try 
 +        {
 +			FileUtils.writeStringToFile(output, builder.toString());
++			FileUtils.writeStringToFile(output2, builder2.toString());
 +		} 
 +        catch (IOException e) 
 +        {
